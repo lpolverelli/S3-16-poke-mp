@@ -12,4 +12,5 @@ object ServerMain extends App{
   CommunicationService(CommunicationService.Service.PlayerInBuilding, connection, connectedPlayers).start()
   CommunicationService(CommunicationService.Service.PlayerLogout, connection, connectedPlayers).start()
   CommunicationService(CommunicationService.Service.PlayerIsBusy, connection, connectedPlayers).start()
+  CommunicationService(CommunicationService.Service.CrashHandler, connection, connectedPlayers).start()
 }

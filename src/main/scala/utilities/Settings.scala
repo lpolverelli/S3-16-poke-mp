@@ -98,6 +98,8 @@ object Settings {
 
     lazy val BATTLE_CHANNEL_QUEUE = "battle"
 
+    lazy val CRASH_HANDLER_CHANNEL_QUEUE = "crash_handler"
+
     lazy val PLAYER_POSITION_EXCHANGE = "player_position_exchange"
 
     lazy val NEW_PLAYER_EXCHANGE = "new_player_exchange"
@@ -107,6 +109,8 @@ object Settings {
     lazy val PLAYER_IN_BUILDING_EXCHANGE = "player_in_building_exchange"
 
     lazy val PLAYER_IS_BUSY_EXCHANGE = "player_is_busy_exchange"
+
+    lazy val LIVENESS_REQUEST_EXCHANGE = "liveness_request_exchange"
 
     lazy val INITIAL_PLAYER_POSITION = CoordinateImpl(25, 25)
 
