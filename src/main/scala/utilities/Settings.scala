@@ -112,6 +112,8 @@ object Settings {
 
     lazy val LIVENESS_REQUEST_EXCHANGE = "liveness_request_exchange"
 
+    lazy val PLAYER_DISCONNECTED_EXCHANGE = "player_disconnected"
+
     lazy val INITIAL_PLAYER_POSITION = CoordinateImpl(25, 25)
 
     lazy val FONT_NAME = "Verdana"

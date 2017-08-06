@@ -3,7 +3,7 @@ package distributed.server
 import com.google.gson.Gson
 import com.rabbitmq.client._
 import distributed.ConnectedPlayers
-import distributed.messages.{LivenessReplyMessage, LivenessRequestMessage, PlayerLogoutMessage}
+import distributed.messages.{LivenessReplyMessageImpl, LivenessRequestMessage, PlayerLogoutMessage}
 import utilities.Settings.Constants
 
 import scala.collection.immutable.HashSet
@@ -23,6 +23,10 @@ class CrashHandlerServerService(private val connection: Connection,
                                private val connectedPlayers: ConnectedPlayers) extends CommunicationService {
   private var livingPlayers = HashSet[Int]()
   private val gson = new Gson()
+  /*
+  TODO: creare copia dei giocatori connessi
+   */
+  private var snapshotConnectedPlayers = connectedPlayers.clone().asInstanceOf[ConnectedPlayers]
 
   /**
     * @inheritdoc
@@ -32,6 +36,8 @@ class CrashHandlerServerService(private val connection: Connection,
 
     import utilities.Settings._
     channel.queueDeclare(Constants.CRASH_HANDLER_CHANNEL_QUEUE, false, false, false, null)
+    channel.exchangeDeclare(Constants.LIVENESS_REQUEST_EXCHANGE, "fanout")
+    channel.exchangeDeclare(Constants.PLAYER_DISCONNECTED_EXCHANGE, "fanout")
 
     val consumer = new DefaultConsumer(channel) {
 
@@ -40,8 +46,10 @@ class CrashHandlerServerService(private val connection: Connection,
                                   properties: AMQP.BasicProperties,
                                   body: Array[Byte]): Unit = {
 
-        val livenessReplyMessage = gson.fromJson(new String(body, "UTF-8"), classOf[LivenessReplyMessage])
+        val livenessReplyMessage = gson.fromJson(new String(body, "UTF-8"), classOf[LivenessReplyMessageImpl])
         livingPlayers = livingPlayers + livenessReplyMessage.userId
+        println("received")
+        livingPlayers foreach (key => println(key))
       }
     }
 
@@ -52,14 +60,14 @@ class CrashHandlerServerService(private val connection: Connection,
         sendLivenessRequest(channel)
 
 
-        Thread sleep 30000
+        Thread sleep 10000
 
         println("check")
         connectedPlayers.getAll.keySet() forEach (key => println(key))
 
-        connectedPlayers.getAll.keySet() forEach (key => if (!livingPlayers.contains(key)) {
+        snapshotConnectedPlayers.getAll.keySet() forEach (key => if (!livingPlayers.contains(key) && connectedPlayers.containsPlayer(key)) {
           connectedPlayers.remove(key)
-          sendLogoutMessage(channel, key)
+          sendDisconnectedMessage(channel, key)
         })
       }
     }).start()
@@ -72,7 +80,7 @@ class CrashHandlerServerService(private val connection: Connection,
     */
   private def sendLivenessRequest(channel: Channel) = {
     livingPlayers = livingPlayers.empty
-    channel.exchangeDeclare(Constants.LIVENESS_REQUEST_EXCHANGE, "fanout")
+    snapshotConnectedPlayers = connectedPlayers.clone().asInstanceOf[ConnectedPlayers]
     val message = gson toJson LivenessRequestMessage
     channel.basicPublish(Constants.LIVENESS_REQUEST_EXCHANGE, "", null, message.getBytes("UTF-8"))
   }
@@ -82,9 +90,8 @@ class CrashHandlerServerService(private val connection: Connection,
     * @param channel the channel through which the message is delivered
     * @param userId the id of the disconnected user
     */
-  private def sendLogoutMessage(channel: Channel, userId: Int) = {
-    channel.exchangeDeclare(Constants.PLAYER_LOGOUT_EXCHANGE, "fanout")
+  private def sendDisconnectedMessage(channel: Channel, userId: Int) = {
     val response = gson toJson PlayerLogoutMessage(userId)
-    channel.basicPublish(Constants.PLAYER_LOGOUT_EXCHANGE, "", null, response.getBytes("UTF-8"))
+    channel.basicPublish(Constants.PLAYER_DISCONNECTED_EXCHANGE, "", null, response.getBytes("UTF-8"))
   }
 }
